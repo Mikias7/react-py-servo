@@ -1,9 +1,9 @@
 import React, { useRef } from "react";
 
 function App() {
-  const intervalRef = useRef(null);
+  const intervalRef = useRef<number | null>(null);
 
-  const startSending = (id) => {
+  const startSending = (id: number) => {
     if (intervalRef.current) return; // already sending
     intervalRef.current = setInterval(async () => {
       await fetch("http://localhost:5000/api/button", {
