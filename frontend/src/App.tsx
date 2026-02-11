@@ -1,18 +1,26 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 
 function App() {
   const intervalRef = useRef<number | null>(null);
 
-  const startSending = (id: number) => {
-    if (intervalRef.current) return; // already sending
-    intervalRef.current = setInterval(async () => {
-      await fetch("http://localhost:5000/api/button", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ button_id: id }),
+  const [angle, setAngle] = useState(90); // start in middle
+
+  const startSending = (direction: "increase" | "decrease", button_id: number) => {
+    if (intervalRef.current) return;
+
+    intervalRef.current = window.setInterval(async () => {
+      setAngle((prev) => {
+        let newAngle =
+          direction === "increase" ? prev + 5 : prev - 5;
+
+        // Clamp between 0 and 180
+        if (newAngle > 180) newAngle = 180;
+        if (newAngle < 0) newAngle = 0;
+
+        sendAngle(newAngle, button_id);
+        return newAngle;
       });
-      console.log("Sending button", id);
-    }, 200); // send every 200ms
+    }, 40);
   };
 
   const stopSending = () => {
@@ -22,29 +30,63 @@ function App() {
     }
   };
 
+  const sendAngle = async (angleValue: number, button_id: number) => {
+    await fetch("http://10.7.2.81:5000/api/button", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ angle: angleValue, button_id: button_id }),
+    });
+
+    console.log("Sending angle:", angleValue);
+  };
+
   return (
     <div style={{ padding: "50px" }}>
       <h2>Hold Buttons</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 120px)", gap: "10px" }}>
+        <h3>Servo 1</h3>
         <button
-          onMouseDown={() => startSending(0)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(0)}
-          onTouchEnd={stopSending}
-        >
-          Button 1
-        </button>
+        onMouseDown={() => startSending("decrease",0)}
+        onMouseUp={stopSending}
+        onMouseLeave={stopSending}
+        onTouchStart={() => startSending("decrease",0)}
+        onTouchEnd={stopSending}
+      >
+        Decrease
+      </button>
+
+      <button
+        onMouseDown={() => startSending("increase",0)}
+        onMouseUp={stopSending}
+        onMouseLeave={stopSending}
+        onTouchStart={() => startSending("increase",0)}
+        onTouchEnd={stopSending}
+      >
+        Increase
+      </button>
+
+
+      <h3>Servo 2</h3>
         <button
-          onMouseDown={() => startSending(1)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(1)}
-          onTouchEnd={stopSending}
-        >
-          Button 2
-        </button>
-        <button
+        onMouseDown={() => startSending("decrease",1)}
+        onMouseUp={stopSending}
+        onMouseLeave={stopSending}
+        onTouchStart={() => startSending("decrease",1)}
+        onTouchEnd={stopSending}
+      >
+        Decrease2
+      </button>
+
+      <button
+        onMouseDown={() => startSending("increase",1)}
+        onMouseUp={stopSending}
+        onMouseLeave={stopSending}
+        onTouchStart={() => startSending("increase",1)}
+        onTouchEnd={stopSending}
+      >
+        Increase2
+      </button>
+        {/* <button
           onMouseDown={() => startSending(2)}
           onMouseUp={stopSending}
           onMouseLeave={stopSending}
@@ -135,7 +177,7 @@ function App() {
           onTouchEnd={stopSending}
         >
           Button 12
-        </button>
+        </button> */}
         {/* Repeat for all 12 buttons explicitly */}
       </div>
     </div>
