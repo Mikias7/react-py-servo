@@ -3,29 +3,37 @@ import ControlButton from "./components/controlButton";
 import { io, Socket } from "socket.io-client";
 
 function App() {
-  const intervalRef = useRef<NodeJS.Timer | null>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
   const [angles, setAngles] = useState<number[]>([0, 0, 0, 0, 0, 0]); // 6 servos
   const [activeButton, setActiveButton] = useState<string | null>(null);
 
-  // Initialize WebSocket connection
-  useEffect(() => {
-    socketRef.current = io("http://10.7.x.x:5000"); // Pi's IP
+  // Add this for WebSocket
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-    socketRef.current.on("connect", () => {
-      console.log("Connected to Pi via WebSocket!");
+  useEffect(() => {
+    // Connect to your backend via WebSocket
+    const s = io("ws://10.7.x.x:5000"); // <-- Replace with your Pi's IP
+    setSocket(s);
+
+    // Optional: listen for server updates
+    s.on("servo_updated", (data: { button_id: number; angle: number }) => {
+      setAngles((prev) => {
+        const newAngles = [...prev];
+        newAngles[data.button_id] = data.angle;
+        return newAngles;
+      });
     });
 
     return () => {
-      socketRef.current?.disconnect();
+      s.disconnect();
     };
   }, []);
 
   const startSending = (direction: "increase" | "decrease", button_id: number) => {
     if (intervalRef.current) return;
 
-    intervalRef.current = setInterval(() => {
+    intervalRef.current = window.setInterval(() => {
       setAngles((prevAngles) => {
         const newAngles = [...prevAngles];
         let newAngle =
@@ -36,8 +44,8 @@ function App() {
 
         newAngles[button_id] = newAngle;
 
-        // Send via WebSocket instead of HTTP
-        socketRef.current?.emit("send_angle", { angle: newAngle, button_id });
+        // <-- Send angle via WebSocket instead of HTTP fetch
+        socket?.emit("update_servo", { button_id, angle: newAngle });
 
         return newAngles;
       });
