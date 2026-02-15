@@ -1,24 +1,45 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import ControlButton from "./components/controlButton";
+import { io, Socket } from "socket.io-client";
 
 function App() {
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timer | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
-  const [angle, setAngle] = useState(90); // start in middle
+  const [angles, setAngles] = useState<number[]>([0, 0, 0, 0, 0, 0]); // 6 servos
+  const [activeButton, setActiveButton] = useState<string | null>(null);
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    socketRef.current = io("http://10.7.x.x:5000"); // Pi's IP
+
+    socketRef.current.on("connect", () => {
+      console.log("Connected to Pi via WebSocket!");
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
 
   const startSending = (direction: "increase" | "decrease", button_id: number) => {
     if (intervalRef.current) return;
 
-    intervalRef.current = window.setInterval(async () => {
-      setAngle((prev) => {
+    intervalRef.current = setInterval(() => {
+      setAngles((prevAngles) => {
+        const newAngles = [...prevAngles];
         let newAngle =
-          direction === "increase" ? prev + 5 : prev - 5;
+          direction === "increase" ? newAngles[button_id] + 5 : newAngles[button_id] - 5;
 
-        // Clamp between 0 and 180
         if (newAngle > 180) newAngle = 180;
         if (newAngle < 0) newAngle = 0;
 
-        sendAngle(newAngle, button_id);
-        return newAngle;
+        newAngles[button_id] = newAngle;
+
+        // Send via WebSocket instead of HTTP
+        socketRef.current?.emit("send_angle", { angle: newAngle, button_id });
+
+        return newAngles;
       });
     }, 40);
   };
@@ -30,155 +51,239 @@ function App() {
     }
   };
 
-  const sendAngle = async (angleValue: number, button_id: number) => {
-    await fetch("http://10.7.2.81:5000/api/button", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ angle: angleValue, button_id: button_id }),
-    });
-
-    console.log("Sending angle:", angleValue);
-  };
-
   return (
-    <div style={{ padding: "50px" }}>
+    <div style={{ padding: "50px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
       <h2>Hold Buttons</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 120px)", gap: "10px" }}>
-        <h3>Servo 1</h3>
-        <button
-        onMouseDown={() => startSending("decrease",0)}
-        onMouseUp={stopSending}
-        onMouseLeave={stopSending}
-        onTouchStart={() => startSending("decrease",0)}
-        onTouchEnd={stopSending}
-      >
-        Decrease
-      </button>
+      <div style={{
+        display: "flex",
+        gap: "3rem",
+        justifyContent: "center",
+        flexWrap: "wrap"
+      }}>
+        {/* Servo 1 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          <ControlButton
+            number={0}
+            direction="increase"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{
+            width: '60px',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            background: '#f9fafb',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {angles[0]}
+          </div>
+          <ControlButton
+            number={0}
+            direction="decrease"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{ marginTop: "0.5rem", fontWeight: 500 }}>Servo 1</div>
+        </div>
 
-      <button
-        onMouseDown={() => startSending("increase",0)}
-        onMouseUp={stopSending}
-        onMouseLeave={stopSending}
-        onTouchStart={() => startSending("increase",0)}
-        onTouchEnd={stopSending}
-      >
-        Increase
-      </button>
+        {/* Servo 2 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          <ControlButton
+            number={1}
+            direction="increase"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{
+            width: '60px',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            background: '#f9fafb',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {angles[1]}
+          </div>
+          <ControlButton
+            number={1}
+            direction="decrease"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{ marginTop: "0.5rem", fontWeight: 500 }}>Servo 2</div>
+        </div>
 
+        {/* Servo 3 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          <ControlButton
+            number={2}
+            direction="increase"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{
+            width: '60px',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            background: '#f9fafb',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {angles[2]}
+          </div>
+          <ControlButton
+            number={2}
+            direction="decrease"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{ marginTop: "0.5rem", fontWeight: 500 }}>Servo 3</div>
+        </div>
+      </div>
 
-      <h3>Servo 2</h3>
-        <button
-        onMouseDown={() => startSending("decrease",1)}
-        onMouseUp={stopSending}
-        onMouseLeave={stopSending}
-        onTouchStart={() => startSending("decrease",1)}
-        onTouchEnd={stopSending}
-      >
-        Decrease2
-      </button>
+      {/* Row 2 */}
+      <div style={{
+        display: "flex",
+        gap: "2rem",
+        justifyContent: "center",
+        marginTop: "2rem",
+        flexWrap: "wrap"
+      }}>
+        {/* Servo 4 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          <ControlButton
+            number={3}
+            direction="increase"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{
+            width: '60px',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            background: '#f9fafb',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {angles[3]}
+          </div>
+          <ControlButton
+            number={3}
+            direction="decrease"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{ marginTop: "0.5rem", fontWeight: 500 }}>Servo 4</div>
+        </div>
 
-      <button
-        onMouseDown={() => startSending("increase",1)}
-        onMouseUp={stopSending}
-        onMouseLeave={stopSending}
-        onTouchStart={() => startSending("increase",1)}
-        onTouchEnd={stopSending}
-      >
-        Increase2
-      </button>
-        {/* <button
-          onMouseDown={() => startSending(2)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(2)}
-          onTouchEnd={stopSending}
-        >
-          Button 3
-        </button>
-        <button
-          onMouseDown={() => startSending(3)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(3)}
-          onTouchEnd={stopSending}
-        >
-          Button 4
-        </button>
+        {/* Servo 5 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          <ControlButton
+            number={4}
+            direction="increase"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{
+            width: '60px',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            background: '#f9fafb',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {angles[4]}
+          </div>
+          <ControlButton
+            number={4}
+            direction="decrease"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{ marginTop: "0.5rem", fontWeight: 500 }}>Servo 5</div>
+        </div>
 
-        <button
-          onMouseDown={() => startSending(4)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(4)}
-          onTouchEnd={stopSending}
-        >
-          Button 5
-        </button>
-        <button
-          onMouseDown={() => startSending(5)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(5)}
-          onTouchEnd={stopSending}
-        >
-          Button 6
-        </button>
-        <button
-          onMouseDown={() => startSending(6)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(6)}
-          onTouchEnd={stopSending}
-        >
-          Button 7
-        </button>
-        <button
-          onMouseDown={() => startSending(7)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(7)}
-          onTouchEnd={stopSending}
-        >
-          Button 8
-        </button>
-
-        <button
-          onMouseDown={() => startSending(8)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(8)}
-          onTouchEnd={stopSending}
-        >
-          Button 9
-        </button>
-        <button
-          onMouseDown={() => startSending(9)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(9)}
-          onTouchEnd={stopSending}
-        >
-          Button 10
-        </button>
-        <button
-          onMouseDown={() => startSending(10)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(10)}
-          onTouchEnd={stopSending}
-        >
-          Button 11
-        </button>
-        <button
-          onMouseDown={() => startSending(11)}
-          onMouseUp={stopSending}
-          onMouseLeave={stopSending}
-          onTouchStart={() => startSending(11)}
-          onTouchEnd={stopSending}
-        >
-          Button 12
-        </button> */}
-        {/* Repeat for all 12 buttons explicitly */}
+        {/* Servo 6 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+          <ControlButton
+            number={5}
+            direction="increase"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{
+            width: '60px',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            color: '#1f2937',
+            background: '#f9fafb',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+          }}>
+            {angles[5]}
+          </div>
+          <ControlButton
+            number={5}
+            direction="decrease"
+            activeButton={activeButton}
+            setActiveButton={setActiveButton}
+            startSending={startSending}
+            stopSending={stopSending}
+          />
+          <div style={{ marginTop: "0.5rem", fontWeight: 500 }}>Servo 6</div>
+        </div>
       </div>
     </div>
   );
